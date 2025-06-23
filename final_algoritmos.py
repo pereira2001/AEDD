@@ -1,4 +1,5 @@
 import streamlit as st
+import math
 
 
 nodes = ("Lisboa", "Madrid", "Barcelona", "Paris" , "Zurique" , "Luxembourg", "Berlin")
@@ -23,25 +24,25 @@ price_car = {
 	'Berlin': {'Lisboa': 303.8, 'Madrid': 323.4,'Barcelona': 221.6,'Paris': 87.4,'Zurique': 101.5,'Luxembourg': 87.3}
 }
 
-# time_train = { 
-#     'Lisboa': {'Madrid': , 'Barcelona': ,'Paris': ,'Zurique': ,'Luxembourg': ,'Berlin': },
-#     'Madrid': {'Lisboa': , 'Barcelona': ,'Paris': ,'Zurique': ,'Luxembourg': ,'Berlin': },
-#     'Barcelona': {'Lisboa': , 'Madrid': ,'Paris': ,'Zurique': ,'Luxembourg': ,'Berlin': },
-#     'Paris': {'Lisboa': , 'Madrid': ,'Barcelona': ,'Zurique': ,'Luxembourg': ,'Berlin': },
-#     'Zurique': {'Lisboa': , 'Madrid': ,'Barcelona': ,'Paris': ,'Luxembourg': ,'Berlin': },
-#     'Luxembourg': {'Lisboa': , 'Madrid': ,'Barcelona': ,'Paris': ,'Zurique': ,'Berlin': },
-# 	'Berlin': {'Lisboa': , 'Madrid': ,'Barcelona': ,'Paris': ,'Zurique': ,'Luxembourg': }
-#     }
+time_train = {
+    'Lisboa': {'Madrid': 521, 'Barcelona': 699, 'Paris': 1134, 'Zurique': 1560, 'Luxembourg': 1447, 'Berlin': 1845},
+    'Madrid': {'Lisboa': 521, 'Barcelona': 165, 'Paris': 420, 'Zurique': 986, 'Luxembourg': 927, 'Berlin': 1226},
+    'Barcelona': {'Lisboa': 699, 'Madrid': 165, 'Paris': 405, 'Zurique': 871, 'Luxembourg': 909, 'Berlin': 1205},
+    'Paris': {'Lisboa': 1134, 'Madrid': 420, 'Barcelona': 405, 'Zurique': 245, 'Luxembourg': 135, 'Berlin': 490},
+    'Zurique': {'Lisboa': 1560, 'Madrid': 986, 'Barcelona': 871, 'Paris': 245, 'Luxembourg': 483, 'Berlin': 480},
+    'Luxembourg': {'Lisboa': 1447, 'Madrid': 927, 'Barcelona': 909, 'Paris': 135, 'Zurique': 483, 'Berlin': 704},
+    'Berlin': {'Lisboa': 1845, 'Madrid': 1226, 'Barcelona': 1205, 'Paris': 490, 'Zurique': 480, 'Luxembourg': 704}
+}
 
-# price_train = { 
-#     'Lisboa': {'Madrid': , 'Barcelona': ,'Paris': ,'Zurique': ,'Luxembourg': ,'Berlin': },
-#     'Madrid': {'Lisboa': , 'Barcelona': ,'Paris': ,'Zurique': ,'Luxembourg': ,'Berlin': },
-#     'Barcelona': {'Lisboa': , 'Madrid': ,'Paris': ,'Zurique': ,'Luxembourg': ,'Berlin': },
-#     'Paris': {'Lisboa': , 'Madrid': ,'Barcelona': ,'Zurique': ,'Luxembourg': ,'Berlin': },
-#     'Zurique': {'Lisboa': , 'Madrid': ,'Barcelona': ,'Paris': ,'Luxembourg': ,'Berlin': },
-#     'Luxembourg': {'Lisboa': , 'Madrid': ,'Barcelona': ,'Paris': ,'Zurique': ,'Berlin': },
-# 	'Berlin': {'Lisboa': , 'Madrid': ,'Barcelona': ,'Paris': ,'Zurique': ,'Luxembourg': }
-#     }
+price_train = {
+    'Lisboa': {'Madrid': 75, 'Barcelona': 145, 'Paris': 150, 'Zurique': 160, 'Luxembourg': 180, 'Berlin': 210},
+    'Madrid': {'Lisboa': 75, 'Barcelona': 50, 'Paris': 130, 'Zurique': 250, 'Luxembourg': 240, 'Berlin': 220},
+    'Barcelona': {'Lisboa': 145, 'Madrid': 50, 'Paris': 95, 'Zurique': 180, 'Luxembourg': 170, 'Berlin': 190},
+    'Paris': {'Lisboa': 150, 'Madrid': 130, 'Barcelona': 95, 'Zurique': 90, 'Luxembourg': 50, 'Berlin': 85},
+    'Zurique': {'Lisboa': 160, 'Madrid': 250, 'Barcelona': 180, 'Paris': 90, 'Luxembourg': 65, 'Berlin': 70},
+    'Luxembourg': {'Lisboa': 180, 'Madrid': 240, 'Barcelona': 170, 'Paris': 50, 'Zurique': 65, 'Berlin': 75},
+    'Berlin': {'Lisboa': 210, 'Madrid': 220, 'Barcelona': 190, 'Paris': 85, 'Zurique': 70, 'Luxembourg': 75}
+}
 
 time_plane = { 
     'Lisboa': {'Madrid': 90, 'Barcelona': 110,'Paris': 145,'Zurique': 270,'Luxembourg': 165,'Berlin': 210},
@@ -63,109 +64,50 @@ price_plane = {
 	'Berlin': {'Lisboa': 351, 'Madrid': 252,'Barcelona': 178,'Paris': 210,'Zurique': 157,'Luxembourg': 251}
     }
 
+table_routes = {}
 
-def find_route(current, end, otimize):
-    current_first = current
+table_routes['time_car'] = time_car
+table_routes['price_car'] = price_car
+table_routes['time_train'] = time_train
+table_routes['price_train'] = price_train
+table_routes['time_plane'] = time_plane
+table_routes['price_plane'] = price_plane
+
+def find_route(current, end, otimize, travel_type):
     
-    array_check_car = {}
-    array_check_train = {}
-    array_check_plane = {}
-
-    match otimize:
-        case 'time':
-            array_check_car = time_car
-            # array_check_train = time_train
-            array_check_plane = time_plane
-        case 'price':
-            array_check_car = price_car
-            # array_check_train = price_train
-            array_check_plane = price_plane
-        case _:
-            print("Erro")
-            return
+    array_check = table_routes[otimize + '_' + travel_type]
     
-
-    #Carro
     unvisited = {node: float('inf') for node in nodes}
-    current_value_car = 0
-    unvisited[current] = current_value_car
-    visited, parents = {}, {}
-    while unvisited: 
-        min_vertex = min(unvisited, key=unvisited.get)
-        for neighbour, distance in array_check_car[current].items():
-            if neighbour not in unvisited:
-                continue
-            new_distance = current_value_car + distance
-            if unvisited[neighbour] == float('inf'):
-                unvisited[neighbour] = new_distance
-                parents[neighbour] = min_vertex
-        visited[current] = current_value_car
-        unvisited.pop(min_vertex)
-        if min_vertex == end:
-            break
-        candidates = [node for node in unvisited.items() if node[1]]
-        # print(f"{candidates = }")
-        current, current_value_car = min(candidates, key=lambda x: x[1])
-        
-    
-    # #Train
-    current = current_first
-    # unvisited = {node: float('inf') for node in nodes}
-    current_value_train = 1000000
-    # unvisited[current] = current_value_train
-    # visited, parents = {}, {}
-    # while unvisited:
-    #     min_vertex = min(unvisited, key=unvisited.get)
-    #     for neighbour, distance in array_check_train[current].items():
-    #         if neighbour not in unvisited:
-    #             continue
-    #         new_distance = current_value_train + distance
-    #         if unvisited[neighbour] == float('inf'):
-    #             unvisited[neighbour] = new_distance
-    #             parents[neighbour] = min_vertex
-    #     visited[current] = current_value_train
-    #     unvisited.pop(min_vertex)
-    #     if min_vertex == end:
-    #         break
-    #     candidates = [node for node in unvisited.items() if node[1]]
-    #     current, current_value_train = min(candidates, key=lambda x: x[1])
-
-    #Plane
-    current = current_first
-    unvisited = {node: float('inf') for node in nodes}
-    current_value_plane = 0
-    unvisited[current] = current_value_plane
+    current_value = 0
+    unvisited[current] = current_value
     visited, parents = {}, {}
     while unvisited:
         min_vertex = min(unvisited, key=unvisited.get)
-        for neighbour, distance in array_check_plane[current].items():
+        for neighbour, distance in array_check[current].items():
             if neighbour not in unvisited:
                 continue
-            new_distance = current_value_plane + distance
+            new_distance = current_value + distance
             if unvisited[neighbour] == float('inf'):
                 unvisited[neighbour] = new_distance
                 parents[neighbour] = min_vertex
-        visited[current] = current_value_plane
+        visited[current] = current_value
         unvisited.pop(min_vertex)
         if min_vertex == end:
             break
         candidates = [node for node in unvisited.items() if node[1]]
-        current, current_value_plane = min(candidates, key=lambda x: x[1])
-
-    print(f"{current_value_car:.2f}")
-    print(f"{current_value_train:.2f}")
-    print(f"{current_value_plane:.2f}")
+        current, current_value = min(candidates, key=lambda x: x[1])
     
-    if(current_value_car < current_value_train and current_value_car < current_value_plane):
-        return "Car", current_value_car
-    if(current_value_train < current_value_car and current_value_train < current_value_plane):
-        return "Train", current_value_train
-    if(current_value_plane < current_value_car and current_value_plane < current_value_train):
-        return "Plane", current_value_plane
+    return current_value
 
-    
-# Interface Streamlit
+def cost_benefit(time, price):
+
+    AVG_SPEED = (105*108*747)/300
+    AVG_PRICE = (20000 * 37.8 * 5000)/3000
+    return ((((time * 60) / AVG_PRICE) + (price*AVG_SPEED)) / math.log(time/price)*0.003)
+
 st.title("Roteiro Europa: Melhor Transporte")
+
+st.html("<a href='' target='_blank'>Grafo</a>")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -173,12 +115,55 @@ with col1:
 with col2:
     destino = st.selectbox("Destino", nodes)
 
-criterio = st.radio("Critério de otimização", ["time", "price"], format_func=lambda x: "Tempo" if x == "time" else "Preço")
+criterio = st.radio("Critério de otimização", ["time", "price", "time_price"], format_func=lambda x: "Tempo" if x == "time" else "Preço" if x == "price" else "Tempo e Preço")
 
 if origem == destino:
     st.warning("A origem e o destino não podem ser iguais.")
 else:
     if st.button("Calcular melhor transporte"):
-        meio, valor = find_route(origem, destino, criterio)
-        unidade = "minutos" if criterio == "time" else "euros"
-        st.success(f"Melhor meio de transporte: **{meio}**\n\n{criterio.capitalize()}: **{valor:.2f} {unidade}**")
+        if criterio == "time_price":
+            time_car = find_route(origem, destino, "time", "car")
+            time_train = find_route(origem, destino, "time", "train")
+            time_plane = find_route(origem, destino, "time", "plane")
+
+            price_car = find_route(origem, destino, "price", "car")
+            price_train = find_route(origem, destino, "price", "train")
+            price_plane = find_route(origem, destino, "price", "plane")
+
+            value_car = cost_benefit(time_car, price_car)
+            value_train = cost_benefit(time_train, price_train)
+            value_plane = cost_benefit(time_plane, price_plane)
+
+            if (value_car < value_train and value_car < value_plane):
+                meio = "Carro"
+                value_time = time_car
+                value_price = price_car
+            if (value_train < value_car and value_train < value_plane):
+                meio = "Comboio"
+                value_time = time_train
+                value_price = price_train
+            if (value_plane < value_car and value_plane < value_train):
+                meio = "Avião"
+                value_time = time_plane
+                value_price = price_plane
+            
+            st.success(f"Melhor meio de transporte: **{meio}**\n\n{criterio.replace('_', ' + ').title()}: **{value_time // 60} horas e {value_time % 60} minutos e {value_price:.2f} euros**")
+
+        else:
+            car = find_route(origem, destino, criterio, "car")
+            train = find_route(origem, destino, criterio, "train")
+            plane = find_route(origem, destino, criterio, "plane")
+            if(car < train and car < plane):
+                meio = "Carro"
+                valor = car
+            if(train < car and train < plane):
+                meio = "Comboio"
+                valor = train
+            if(plane < car and plane < train):
+                meio = "Avião"
+                valor = plane
+            unidade = f"{valor // 60} horas e {valor % 60} minutos" if criterio == "time" else f"{valor:.2f} euros"
+            st.success(f"Melhor meio de transporte: **{meio}**\n\n{criterio.capitalize()}: **{unidade}**")
+
+        
+        st.html("<p>Verificar com dados reais:<a href='' target='_blank'>Carro</a> <a href='' target='_blank'>Comboio</a> <a href='' target='_blank'>Avião</a></p>")
