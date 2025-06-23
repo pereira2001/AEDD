@@ -107,7 +107,7 @@ def cost_benefit(time, price):
 
 st.title("Roteiro Europa: Melhor Transporte")
 
-st.html("<a href='' target='_blank'>Grafo</a>")
+st.html("<a href='https://aeeddipiaget.pt/grafo/' target='_blank'>Grafo</a>")
 
 col1, col2 = st.columns(2)
 with col1:
