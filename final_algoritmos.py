@@ -1,9 +1,22 @@
 import streamlit as st
 import math
 
-
+#Cidades
 nodes = ("Lisboa", "Madrid", "Barcelona", "Paris" , "Zurique" , "Luxembourg", "Berlin")
 
+#Lat, Long Cidades
+nodes_lat_long = {
+    'Lisboa': (38.7223, -9.1393),
+    'Madrid': (40.4168, -3.7038),
+    'Barcelona': (41.3851, 2.1734),
+    'Paris': (48.8566, 2.3522),
+    'Zurique': (47.3769, 8.5417),
+    'Luxembourg': (49.6116, 6.1319),
+    'Berlin': (52.5200, 13.4050)
+}
+
+
+#Grafos de Tempo e Preço Carro
 time_car = {
     'Lisboa': {'Madrid': 353, 'Barcelona': 691,'Paris': 1000,'Zurique': 1253,'Luxembourg': 1223,'Berlin': 1620},
     'Madrid': {'Lisboa': 353, 'Barcelona': 377,'Paris': 774,'Zurique': 955,'Luxembourg': 990,'Berlin': 1416},
@@ -24,6 +37,7 @@ price_car = {
 	'Berlin': {'Lisboa': 303.8, 'Madrid': 323.4,'Barcelona': 221.6,'Paris': 87.4,'Zurique': 101.5,'Luxembourg': 87.3}
 }
 
+#Grafos de Tempo e Preço Comboio
 time_train = {
     'Lisboa': {'Madrid': 521, 'Barcelona': 699, 'Paris': 1134, 'Zurique': 1560, 'Luxembourg': 1447, 'Berlin': 1845},
     'Madrid': {'Lisboa': 521, 'Barcelona': 165, 'Paris': 420, 'Zurique': 986, 'Luxembourg': 927, 'Berlin': 1226},
@@ -44,6 +58,7 @@ price_train = {
     'Berlin': {'Lisboa': 210, 'Madrid': 220, 'Barcelona': 190, 'Paris': 85, 'Zurique': 70, 'Luxembourg': 75}
 }
 
+#Grafos de Tempo e Preço Avião
 time_plane = { 
     'Lisboa': {'Madrid': 90, 'Barcelona': 110,'Paris': 145,'Zurique': 270,'Luxembourg': 165,'Berlin': 210},
     'Madrid': {'Lisboa': 90, 'Barcelona': 85,'Paris': 125,'Zurique': 140,'Luxembourg': 140,'Berlin': 180},
@@ -64,6 +79,7 @@ price_plane = {
 	'Berlin': {'Lisboa': 351, 'Madrid': 252,'Barcelona': 178,'Paris': 210,'Zurique': 157,'Luxembourg': 251}
     }
 
+#Tabela de rotas
 table_routes = {}
 
 table_routes['time_car'] = time_car
@@ -75,9 +91,22 @@ table_routes['price_plane'] = price_plane
 
 
 def find_route(current, end, otimize, travel_type):
+    """
+        Função que encontra a rota mais curta entre dois pontos, utilizando o algoritmo de Dijkstra.
+        current -> ponto de partida
+        end -> ponto de chegada
+        otimize -> otimização da rota (time ou price)
+        travel_type -> tipo de veiculo (car, train, plane)
 
+        Retorna:
+        parents -> dicionário com a rota mais curta
+        current_value -> valor do tempo ou preço da rota mais curta
+    """
+
+    # Criação do array de nós
     array_check = table_routes[otimize + '_' + travel_type]
 
+    # Criação do array de nós visitados, por visitar e variaveis auxiliares
     unvisited = {node: float('inf') for node in nodes}
     current_value = 0
     unvisited[current] = current_value
@@ -101,26 +130,101 @@ def find_route(current, end, otimize, travel_type):
     
     return parents, current_value
 
+def find_route_both(current, end, otimize_1, otimize_2, travel_type):
+    """
+        Função que encontra a rota mais curta entre dois pontos, utilizando o algoritmo de Dijkstra.
+        current -> ponto de partida
+        end -> ponto de chegada
+        otimize_1 -> otimização da rota principal (time ou price)
+        otimize_2 -> otimização da rota auxiliar (time ou price)
+        travel_type -> tipo de veiculo (car, train, plane)
+
+        Retorna:
+        parents -> dicionário com a rota mais curta
+        current_value -> valor do otimize_1 da rota mais curta
+        current_value -> valor do otimize_2 da rota mais curta
+
+    """
+    array_check = table_routes[otimize_1 + '_' + travel_type]
+    array_check_aux = table_routes[otimize_2 + '_' + travel_type]
+
+    unvisited = {node: float('inf') for node in nodes}
+    unvisited_aux = {node: float('inf') for node in nodes}
+    current_value = 0
+    current_value_aux = 0
+    unvisited[current] = current_value
+    visited, parents = {}, {}
+    unvisited_aux[current] = current_value_aux
+    
+    while unvisited:
+        min_vertex = min(unvisited, key=unvisited.get)
+        for neighbour, distance in array_check[current].items():
+            if neighbour not in unvisited:
+                continue
+            distance_aux = array_check_aux[current][neighbour]
+            new_distance = current_value + distance
+            new_distance_aux = current_value_aux + distance_aux
+            if unvisited[neighbour] == float('inf') or unvisited[neighbour] > new_distance:
+                unvisited[neighbour] = new_distance
+                unvisited_aux[neighbour] = new_distance_aux
+                parents[neighbour] = min_vertex
+            elif unvisited_aux[neighbour] > new_distance_aux:
+                unvisited_aux[neighbour] = new_distance_aux
+        visited[current] = current_value
+        unvisited.pop(min_vertex)
+        unvisited_aux.pop(min_vertex)
+        if min_vertex == end:
+            break
+        candidates = [node for node in unvisited.items() if node[1]]
+        # candidates_aux = {node for node in nodes}
+        current, current_value = min(candidates, key=lambda x: x[1])
+        current_value_aux = unvisited_aux[current]
+    
+    return parents, current_value, current_value_aux
+
 def generate_path(parents, start , end):
-	path=[end]
-	while True:
-		key=parents[path[0]]
-		path.insert (0, key)
-		if key == start:
-			break
-	return " ---> ".join(path)
+    """
+        Função que gera a rota entre dois pontos.
+        parents -> dicionário com a rota mais curta
+        start -> ponto de partida
+        end -> ponto de chegada
+        Retorna:
+        path -> rota mais curta
+    """
+    path=[end]
+    while True:
+        key=parents[path[0]]
+        path.insert (0, key)
+        if key == start:
+            break
+    return " ---> ".join(path)
 
 def cost_benefit(time, price, time_1, price_1, time_2, price_2):
+    """
+        Função que calcula o custo benefício da rota.
+        time -> tempo do utilizador
+        price -> preço do utilizador
+        time_1 -> tempo da rota principal
+        price_1 -> preço da rota principal
+        time_2 -> tempo da rota auxiliar
+        price_2 -> preço da rota auxiliar
+        Retorna:
+        1 -> custo benefício da rota 1
+        2 -> custo benefício da rota 2
+    """
 
     valor_base = time/price
 
-    valor=(time_1-time_2)/(price_1-price_2)
+    
 
-    if valor < valor_base:
+    valor_1=abs(valor_base - (time_1)/(price_1))
+    valor_2=abs(valor_base - (time_2)/(price_2))
+
+    if valor_1 <= valor_2:
         return 1
     else:
         return 2
-    
+
 
 st.title("Roteiro Europa: Melhor Transporte")
 
@@ -149,49 +253,99 @@ elif time == "" or price == "" or time == "0" or price == "0":
 else:
     if st.button("Calcular melhor transporte"):
         if criterio == "time_price":
-            parents_time,time_car = find_route(origem, destino, "time", "car")
-            parents_time,time_train = find_route(origem, destino, "time", "train")
-            parents_time,time_plane = find_route(origem, destino, "time", "plane")
 
-            parents_price,price_car = find_route(origem, destino, "price", "car")
-            parents_price,price_train = find_route(origem, destino, "price", "train")
-            parents_price,price_plane = find_route(origem, destino, "price", "plane")
+            #Verificar se é melhor o tempo-preço ou o preço-tempo do carro
+            parents_1, tempo_car_1, preco_car_1 = find_route_both(origem, destino, "time", "price", "car")
+            parents_2, preco_car_2, tempo_car_2 = find_route_both(origem, destino, "price", "time", "car")
+            if tempo_car_1 != tempo_car_2:
+                if cost_benefit(int(time), int(price), tempo_car_1, preco_car_1, tempo_car_2, preco_car_2) == 1:
+                    otimize = "time"
+                    best_time_car, best_price_car = tempo_car_1, preco_car_1
+                else:
+                    otimize = "price"
+                    best_time_car, best_price_car = tempo_car_2, preco_car_2
+            elif preco_car_1 != preco_car_2:
+                if cost_benefit(int(time), int(price), tempo_car_1, preco_car_1, tempo_car_2, preco_car_2) == 1:
+                    otimize = "time"
+                    best_time_car, best_price_car = tempo_car_1, preco_car_1
+                else:
+                    otimize = "price"
+                    best_time_car, best_price_car = tempo_car_2, preco_car_2
+            else:
+                otimize = "time"
+                best_time_car, best_price_car = tempo_car_1, preco_car_1
 
-            value_cost = cost_benefit(int(time), int(price), time_car, price_car, time_train, price_train)
-            if value_cost == 1:
-                value_cost = cost_benefit(int(time), int(price),time_car, price_car, time_plane, price_plane)
-                if value_cost == 1:
+            #Verificar se é melhor o tempo-preço ou o preço-tempo do comboio
+            parents_1, tempo_train_1, preco_train_1 = find_route_both(origem, destino, "time", "price", "train")
+            parents_2, preco_train_2, tempo_train_2 = find_route_both(origem, destino, "price", "time", "train")
+            if tempo_train_1 != tempo_train_2:
+                if cost_benefit(int(time), int(price), tempo_train_1, preco_train_1, tempo_train_2, preco_train_2) == 1:
+                    otimize = "time"
+                    best_time_train, best_price_train = tempo_train_1, preco_train_1
+                else:
+                    otimize = "price"
+                    best_time_train, best_price_train = tempo_train_2, preco_train_2
+            elif preco_train_1 != preco_train_2:
+                if cost_benefit(int(time), int(price), tempo_train_1, preco_train_1, tempo_train_2, preco_train_2) == 1:
+                    otimize = "time"
+                    best_time_train, best_price_train = tempo_train_1, preco_train_1
+                else:
+                    otimize = "price"
+                    best_time_train, best_price_train = tempo_train_2, preco_train_2
+            else:
+                otimize = "time"
+                best_time_train, best_price_train = tempo_train_1, preco_train_1
+
+            #Verificar se é melhor o tempo-preço ou o preço-tempo do avião
+            parents_1, tempo_plane_1, preco_plane_1 = find_route_both(origem, destino, "time", "price", "plane")
+            parents_2, preco_plane_2, tempo_plane_2 = find_route_both(origem, destino, "price", "time", "plane")
+            if tempo_plane_1 != tempo_plane_2:
+                if cost_benefit(int(time), int(price), tempo_plane_1, preco_plane_1, tempo_plane_2, preco_plane_2) == 1:
+                    otimize = "time"
+                    best_time_plane, best_price_plane = tempo_plane_1, preco_plane_1
+                else:
+                    otimize = "price"
+                    best_time_plane, best_price_plane = tempo_plane_2, preco_plane_2
+            elif preco_plane_1 != preco_plane_2:
+                if cost_benefit(int(time), int(price), tempo_plane_1, preco_plane_1, tempo_plane_2, preco_plane_2) == 1:
+                    otimize = "time"
+                    best_time_plane, best_price_plane = tempo_plane_1, preco_plane_1
+                else:
+                    otimize = "price"
+                    best_time_plane, best_price_plane = tempo_plane_2, preco_plane_2
+            else:
+                otimize = "time"
+                best_time_plane, best_price_plane = tempo_plane_1, preco_plane_1
+
+            #verificar se é melhor carro ou comboio
+            if cost_benefit(int(time), int(price), best_time_car, best_price_car, best_time_train, best_price_train) == 1:
+                #verificar se é melhor carro ou comboio
+                if cost_benefit(int(time), int(price), best_time_car, best_price_car, best_time_plane, best_price_plane) == 1:
                     meio = "Carro"
                 else:
                     meio = "Avião"
             else:
-                value_cost = cost_benefit(int(time), int(price),time_train, price_train, time_plane, price_plane)
-                if value_cost == 1:
+                if cost_benefit(int(time), int(price), best_time_train, best_price_train, best_time_plane, best_price_plane) == 1:
                     meio = "Comboio"
                 else:
                     meio = "Avião"
 
             if meio == "Carro":
-                value_time = time_car
-                value_price = price_car
-                parents,time_car = find_route(origem, destino, "time", "car")
-                parents_price,price_car = find_route(origem, destino, "price", "car")
+                value_time = best_time_car
+                value_price = best_price_car
+                parents,x = find_route(origem, destino, otimize, "car")
             if meio == "Comboio":
-                value_time = time_train
-                value_price = price_train
-                parents_time,time_train = find_route(origem, destino, "time", "train")
-                parents_price,price_train = find_route(origem, destino, "price", "train")
+                value_time = best_time_train
+                value_price = best_price_train
+                parents,x = find_route(origem, destino, otimize, "train")
             if meio == "Avião":
-                value_time = time_plane
-                value_price = price_plane
-                parents_time,time_train = find_route(origem, destino, "time", "train")
-                parents_price,price_plane = find_route(origem, destino, "price", "plane")
+                value_time = best_time_plane
+                value_price = best_price_plane
+                parents,x = find_route(origem, destino, otimize, "plane")
 
-            path_time = generate_path(parents_time, origem, destino)
-            path_price = generate_path(parents_price, origem, destino)
+            path = generate_path(parents, origem, destino)
             
-            st.success(f"Melhor meio de transporte: **{meio}**\n\nTempo: {path_time}\n\nPreço: {path_price}\n\n{criterio.replace('_', ' + ').title()}: **{value_time // 60} horas e {value_time % 60} minutos ou {value_price:.2f} euros**")
-
+            st.success(f"Melhor meio de transporte: **{meio}**\n\n{path}\n\n{criterio.replace('_', ' + ').title()}: **{value_time // 60} horas e {value_time % 60} minutos ou {value_price:.2f} euros**")
         else:
             parents,car = find_route(origem, destino, criterio, "car")
             parents,train = find_route(origem, destino, criterio, "train")
@@ -209,4 +363,5 @@ else:
             path = generate_path(parents, origem, destino)
             st.success(f"Melhor meio de transporte: **{meio}**\n\n{path}\n\n{criterio.capitalize()}: **{unidade}**")
 
-        st.html("<p>Verificar com dados reais:<a href='' target='_blank'>Carro</a> <a href='' target='_blank'>Comboio</a> <a href='' target='_blank'>Avião</a></p>")
+        st.html(f"<p>Verificar com dados reais:<a href='https://www.google.com/maps/dir/{nodes_lat_long[origem][0]},{nodes_lat_long[origem][1]}/{nodes_lat_long[destino][0]},{nodes_lat_long[destino][1]}' target='_blank'>Google Maps</a>")
+
