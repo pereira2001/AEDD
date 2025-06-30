@@ -73,21 +73,23 @@ table_routes['price_train'] = price_train
 table_routes['time_plane'] = time_plane
 table_routes['price_plane'] = price_plane
 
+
 def find_route(current, end, otimize, travel_type):
-    
+
     array_check = table_routes[otimize + '_' + travel_type]
-    
+
     unvisited = {node: float('inf') for node in nodes}
     current_value = 0
     unvisited[current] = current_value
     visited, parents = {}, {}
+    
     while unvisited:
         min_vertex = min(unvisited, key=unvisited.get)
         for neighbour, distance in array_check[current].items():
             if neighbour not in unvisited:
                 continue
             new_distance = current_value + distance
-            if unvisited[neighbour] == float('inf'):
+            if unvisited[neighbour] == float('inf') or unvisited[neighbour] > new_distance:
                 unvisited[neighbour] = new_distance
                 parents[neighbour] = min_vertex
         visited[current] = current_value
@@ -97,13 +99,28 @@ def find_route(current, end, otimize, travel_type):
         candidates = [node for node in unvisited.items() if node[1]]
         current, current_value = min(candidates, key=lambda x: x[1])
     
-    return current_value
+    return parents, current_value
 
-def cost_benefit(time, price):
+def generate_path(parents, start , end):
+	path=[end]
+	while True:
+		key=parents[path[0]]
+		path.insert (0, key)
+		if key == start:
+			break
+	return " ---> ".join(path)
 
-    AVG_SPEED = (105*108*747)/300
-    AVG_PRICE = (20000 * 37.8 * 5000)/3000
-    return ((((time * 60) / AVG_PRICE) + (price*AVG_SPEED)) / math.log(time/price)*0.003)
+def cost_benefit(time, price, time_1, price_1, time_2, price_2):
+
+    valor_base = time/price
+
+    valor=(time_1-time_2)/(price_1-price_2)
+
+    if valor < valor_base:
+        return 1
+    else:
+        return 2
+    
 
 st.title("Roteiro Europa: Melhor Transporte")
 
@@ -117,42 +134,68 @@ with col2:
 
 criterio = st.radio("Critério de otimização", ["time", "price", "time_price"], format_func=lambda x: "Tempo" if x == "time" else "Preço" if x == "price" else "Tempo e Preço")
 
+time, price = 0,0
+if criterio == "time_price":
+    col1, col2 = st.columns(2)
+    with col1:
+        time = st.text_input("Tempo(minutos)")
+    with col2:
+        price = st.text_input("Preço(euros)")
+
 if origem == destino:
     st.warning("A origem e o destino não podem ser iguais.")
+elif time == "" or price == "":
+    st.warning("Tem de colocar valores da relação tempo preço.")
 else:
     if st.button("Calcular melhor transporte"):
         if criterio == "time_price":
-            time_car = find_route(origem, destino, "time", "car")
-            time_train = find_route(origem, destino, "time", "train")
-            time_plane = find_route(origem, destino, "time", "plane")
+            parents_time,time_car = find_route(origem, destino, "time", "car")
+            parents_time,time_train = find_route(origem, destino, "time", "train")
+            parents_time,time_plane = find_route(origem, destino, "time", "plane")
 
-            price_car = find_route(origem, destino, "price", "car")
-            price_train = find_route(origem, destino, "price", "train")
-            price_plane = find_route(origem, destino, "price", "plane")
+            parents_price,price_car = find_route(origem, destino, "price", "car")
+            parents_price,price_train = find_route(origem, destino, "price", "train")
+            parents_price,price_plane = find_route(origem, destino, "price", "plane")
 
-            value_car = cost_benefit(time_car, price_car)
-            value_train = cost_benefit(time_train, price_train)
-            value_plane = cost_benefit(time_plane, price_plane)
+            value_cost = cost_benefit(int(time), int(price), time_car, price_car, time_train, price_train)
+            if value_cost == 1:
+                value_cost = cost_benefit(int(time), int(price),time_car, price_car, time_plane, price_plane)
+                if value_cost == 1:
+                    meio = "Carro"
+                else:
+                    meio = "Avião"
+            else:
+                value_cost = cost_benefit(int(time), int(price),time_train, price_train, time_plane, price_plane)
+                if value_cost == 1:
+                    meio = "Comboio"
+                else:
+                    meio = "Avião"
 
-            if (value_car < value_train and value_car < value_plane):
-                meio = "Carro"
+            if meio == "Carro":
                 value_time = time_car
                 value_price = price_car
-            if (value_train < value_car and value_train < value_plane):
-                meio = "Comboio"
+                parents,time_car = find_route(origem, destino, "time", "car")
+                parents_price,price_car = find_route(origem, destino, "price", "car")
+            if meio == "Comboio":
                 value_time = time_train
                 value_price = price_train
-            if (value_plane < value_car and value_plane < value_train):
-                meio = "Avião"
+                parents_time,time_train = find_route(origem, destino, "time", "train")
+                parents_price,price_train = find_route(origem, destino, "price", "train")
+            if meio == "Avião":
                 value_time = time_plane
                 value_price = price_plane
+                parents_time,time_train = find_route(origem, destino, "time", "train")
+                parents_price,price_plane = find_route(origem, destino, "price", "plane")
+
+            path_time = generate_path(parents_time, origem, destino)
+            path_price = generate_path(parents_price, origem, destino)
             
-            st.success(f"Melhor meio de transporte: **{meio}**\n\n{criterio.replace('_', ' + ').title()}: **{value_time // 60} horas e {value_time % 60} minutos e {value_price:.2f} euros**")
+            st.success(f"Melhor meio de transporte: **{meio}**\n\nTempo: {path_time}\n\nPreço: {path_price}\n\n{criterio.replace('_', ' + ').title()}: **{value_time // 60} horas e {value_time % 60} minutos ou {value_price:.2f} euros**")
 
         else:
-            car = find_route(origem, destino, criterio, "car")
-            train = find_route(origem, destino, criterio, "train")
-            plane = find_route(origem, destino, criterio, "plane")
+            parents,car = find_route(origem, destino, criterio, "car")
+            parents,train = find_route(origem, destino, criterio, "train")
+            parents,plane = find_route(origem, destino, criterio, "plane")
             if(car < train and car < plane):
                 meio = "Carro"
                 valor = car
@@ -163,7 +206,7 @@ else:
                 meio = "Avião"
                 valor = plane
             unidade = f"{valor // 60} horas e {valor % 60} minutos" if criterio == "time" else f"{valor:.2f} euros"
-            st.success(f"Melhor meio de transporte: **{meio}**\n\n{criterio.capitalize()}: **{unidade}**")
+            path = generate_path(parents, origem, destino)
+            st.success(f"Melhor meio de transporte: **{meio}**\n\n{path}\n\n{criterio.capitalize()}: **{unidade}**")
 
-        
         st.html("<p>Verificar com dados reais:<a href='' target='_blank'>Carro</a> <a href='' target='_blank'>Comboio</a> <a href='' target='_blank'>Avião</a></p>")
