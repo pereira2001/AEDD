@@ -144,7 +144,7 @@ if criterio == "time_price":
 
 if origem == destino:
     st.warning("A origem e o destino não podem ser iguais.")
-elif time == "" or price == "":
+elif time == "" or price == "" or time == "0" or price == "0":
     st.warning("Tem de colocar valores da relação tempo preço.")
 else:
     if st.button("Calcular melhor transporte"):
