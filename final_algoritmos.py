@@ -291,8 +291,8 @@ else:
         if criterio == "time_price":
 
             #Verificar se é melhor o tempo-preço ou o preço-tempo do carro
-            parents_1, tempo_car_1, preco_car_1 = find_route_both(origem, destino, "time", "price", "car")
-            parents_2, preco_car_2, tempo_car_2 = find_route_both(origem, destino, "price", "time", "car")
+            parents_time, tempo_car_1, preco_car_1 = find_route_both(origem, destino, "time", "price", "car")
+            parents_price, preco_car_2, tempo_car_2 = find_route_both(origem, destino, "price", "time", "car")
             if tempo_car_1 != tempo_car_2:
                 if cost_benefit(int(time), int(price), tempo_car_1, preco_car_1, tempo_car_2, preco_car_2) == 1:
                     otimize = "time"
@@ -312,8 +312,8 @@ else:
                 best_time_car, best_price_car = tempo_car_1, preco_car_1
 
             #Verificar se é melhor o tempo-preço ou o preço-tempo do comboio
-            parents_1, tempo_train_1, preco_train_1 = find_route_both(origem, destino, "time", "price", "train")
-            parents_2, preco_train_2, tempo_train_2 = find_route_both(origem, destino, "price", "time", "train")
+            parents_time, tempo_train_1, preco_train_1 = find_route_both(origem, destino, "time", "price", "train")
+            parents_price, preco_train_2, tempo_train_2 = find_route_both(origem, destino, "price", "time", "train")
             if tempo_train_1 != tempo_train_2:
                 if cost_benefit(int(time), int(price), tempo_train_1, preco_train_1, tempo_train_2, preco_train_2) == 1:
                     otimize = "time"
@@ -333,8 +333,8 @@ else:
                 best_time_train, best_price_train = tempo_train_1, preco_train_1
 
             #Verificar se é melhor o tempo-preço ou o preço-tempo do avião
-            parents_1, tempo_plane_1, preco_plane_1 = find_route_both(origem, destino, "time", "price", "plane")
-            parents_2, preco_plane_2, tempo_plane_2 = find_route_both(origem, destino, "price", "time", "plane")
+            parents_time, tempo_plane_1, preco_plane_1 = find_route_both(origem, destino, "time", "price", "plane")
+            parents_price, preco_plane_2, tempo_plane_2 = find_route_both(origem, destino, "price", "time", "plane")
             if tempo_plane_1 != tempo_plane_2:
                 if cost_benefit(int(time), int(price), tempo_plane_1, preco_plane_1, tempo_plane_2, preco_plane_2) == 1:
                     otimize = "time"
@@ -389,21 +389,24 @@ else:
             show_table(f"Tempo - {meio} (minutos)", table_routes['time_' + travel_type])
             show_table(f"Preço - {meio} (€)", table_routes['price_' + travel_type])
         else:
-            parents,car = find_route(origem, destino, criterio, "car")
-            parents,train = find_route(origem, destino, criterio, "train")
-            parents,plane = find_route(origem, destino, criterio, "plane")
+            parents_car,car = find_route(origem, destino, criterio, "car")
+            parents_train,train = find_route(origem, destino, criterio, "train")
+            parents_plane,plane = find_route(origem, destino, criterio, "plane")
             if(car < train and car < plane):
                 travel_type = "car"
                 meio = "Carro"
                 valor = car
+                parents = parents_car
             if(train < car and train < plane):
                 travel_type = "train"
                 meio = "Comboio"
                 valor = train
+                parents = parents_train
             if(plane < car and plane < train):
                 travel_type = "plane"
                 meio = "Avião"
                 valor = plane
+                parents = parents_plane
             unidade = f"{valor // 60} horas e {valor % 60} minutos" if criterio == "time" else f"{valor:.2f} euros"
             path = generate_path(parents, origem, destino)
             st.success(f"Melhor meio de transporte: **{meio}**\n\n{path}\n\n{criterio.capitalize()}: **{unidade}**")
