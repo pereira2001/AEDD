@@ -89,29 +89,23 @@ table_routes['price_train'] = price_train
 table_routes['time_plane'] = time_plane
 table_routes['price_plane'] = price_plane
 
-def dict_to_df_ordered(data):
+def df_order(data):
     """
         Função para ordenar a tabela com Lisboa no inicio
         data -> valores da tabela
 
         Retorna:
-        df -> valor da tabela ordenada
+        df -> tabela ordenada
     """
     
     df = pd.DataFrame(data).T
     
-    #Coloca Lisboa em primeiro nas linhas
-    rows = df.index.tolist()
-    if 'Lisboa' in rows:
-        rows.remove('Lisboa')
-        rows = ['Lisboa'] + sorted(rows)
+    #Coloca linhas por ordem alfabetica
+    rows = sorted(df.index.tolist())
     
     #Coloca Lisboa primeiro em colunas
-    cols = df.columns.tolist()
-    if 'Lisboa' in cols:
-        cols.remove('Lisboa')
-        cols = ['Lisboa'] + sorted(cols)
-    
+    cols = sorted(df.columns.tolist())
+
     df = df.loc[rows, cols]
     return df
 
@@ -122,7 +116,7 @@ def show_table(title, data):
         data -> valores da tabela
     """
     st.header(title)
-    df = dict_to_df_ordered(data)
+    df = df_order(data)
     st.dataframe(df)
 
 def find_route(current, end, otimize, travel_type):
