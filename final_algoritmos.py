@@ -1,5 +1,5 @@
 import streamlit as st
-import math
+import pandas as pd
 
 #Cidades
 nodes = ("Lisboa", "Madrid", "Barcelona", "Paris" , "Zurique" , "Luxembourg", "Berlin")
@@ -89,6 +89,41 @@ table_routes['price_train'] = price_train
 table_routes['time_plane'] = time_plane
 table_routes['price_plane'] = price_plane
 
+def dict_to_df_ordered(data):
+    """
+        Função para ordenar a tabela com Lisboa no inicio
+        data -> valores da tabela
+
+        Retorna:
+        df -> valor da tabela ordenada
+    """
+    
+    df = pd.DataFrame(data).T
+    
+    #Coloca Lisboa em primeiro nas linhas
+    rows = df.index.tolist()
+    if 'Lisboa' in rows:
+        rows.remove('Lisboa')
+        rows = ['Lisboa'] + sorted(rows)
+    
+    #Coloca Lisboa primeiro em colunas
+    cols = df.columns.tolist()
+    if 'Lisboa' in cols:
+        cols.remove('Lisboa')
+        cols = ['Lisboa'] + sorted(cols)
+    
+    df = df.loc[rows, cols]
+    return df
+
+def show_table(title, data):
+    """
+        Função para escrever o titulo e tabela no programa
+        title -> titulo da tabela
+        data -> valores da tabela
+    """
+    st.header(title)
+    df = dict_to_df_ordered(data)
+    st.dataframe(df)
 
 def find_route(current, end, otimize, travel_type):
     """
@@ -230,6 +265,7 @@ st.title("Roteiro Europa: Melhor Transporte")
 
 st.html("<a href='https://aeeddipiaget.pt/grafo/' target='_blank'>Grafo</a>")
 
+
 col1, col2 = st.columns(2)
 with col1:
     origem = st.selectbox("Origem", nodes)
@@ -331,14 +367,17 @@ else:
                     meio = "Avião"
 
             if meio == "Carro":
+                travel_type = "car"
                 value_time = best_time_car
                 value_price = best_price_car
                 parents,x = find_route(origem, destino, otimize, "car")
             if meio == "Comboio":
+                travel_type = "train"
                 value_time = best_time_train
                 value_price = best_price_train
                 parents,x = find_route(origem, destino, otimize, "train")
             if meio == "Avião":
+                travel_type = "plane"
                 value_time = best_time_plane
                 value_price = best_price_plane
                 parents,x = find_route(origem, destino, otimize, "plane")
@@ -346,22 +385,31 @@ else:
             path = generate_path(parents, origem, destino)
             
             st.success(f"Melhor meio de transporte: **{meio}**\n\n{path}\n\n{criterio.replace('_', ' + ').title()}: **{value_time // 60} horas e {value_time % 60} minutos ou {value_price:.2f} euros**")
+            
+            show_table(f"Tempo - {meio} (minutos)", table_routes['time_' + travel_type])
+            show_table(f"Preço - {meio} (€)", table_routes['price_' + travel_type])
         else:
             parents,car = find_route(origem, destino, criterio, "car")
             parents,train = find_route(origem, destino, criterio, "train")
             parents,plane = find_route(origem, destino, criterio, "plane")
             if(car < train and car < plane):
+                travel_type = "car"
                 meio = "Carro"
                 valor = car
             if(train < car and train < plane):
+                travel_type = "train"
                 meio = "Comboio"
                 valor = train
             if(plane < car and plane < train):
+                travel_type = "plane"
                 meio = "Avião"
                 valor = plane
             unidade = f"{valor // 60} horas e {valor % 60} minutos" if criterio == "time" else f"{valor:.2f} euros"
             path = generate_path(parents, origem, destino)
             st.success(f"Melhor meio de transporte: **{meio}**\n\n{path}\n\n{criterio.capitalize()}: **{unidade}**")
+            #Tabela
+            show_table(f"Tempo - {meio} (minutos)" if criterio == "time" else f"Preço - {meio} (€)", table_routes[criterio + '_' + travel_type])
+
 
         st.html(f"<p>Verificar com dados reais:<a href='https://www.google.com/maps/dir/{nodes_lat_long[origem][0]},{nodes_lat_long[origem][1]}/{nodes_lat_long[destino][0]},{nodes_lat_long[destino][1]}' target='_blank'>Google Maps</a>")
 
