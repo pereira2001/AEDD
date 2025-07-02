@@ -254,31 +254,45 @@ def cost_benefit(time, price, time_1, price_1, time_2, price_2):
     else:
         return 2
 
-
+#Titulo pagina
 st.title("Roteiro Europa: Melhor Transporte")
 
+#Link para o grafo
 st.html("<a href='https://aeeddipiaget.pt/grafo/' target='_blank'>Grafo</a>")
 
-
+#Criar 2 colunas
 col1, col2 = st.columns(2)
+
+#Adicionar na coluna 1 a Origem
 with col1:
     origem = st.selectbox("Origem", nodes)
+
+#Adicionar na coluna 2 o Destino
 with col2:
     destino = st.selectbox("Destino", nodes)
 
+#Criterio de otimização
 criterio = st.radio("Critério de otimização", ["time", "price", "time_price"], format_func=lambda x: "Tempo" if x == "time" else "Preço" if x == "price" else "Tempo e Preço")
 
+#Declarar/Inicializar o tempo e preço
 time, price = 0,0
 if criterio == "time_price":
+    #Criar 2 colunas
     col1, col2 = st.columns(2)
+
+    #Adicionar na coluna 1 a Tempo
     with col1:
         time = st.text_input("Tempo(minutos)")
+
+    #Adicionar na coluna 2 o Preço
     with col2:
         price = st.text_input("Preço(euros)")
 
 if origem == destino:
+    #Colocar aviso caso a origem e destino sejam iguais
     st.warning("A origem e o destino não podem ser iguais.")
 elif time == "" or price == "" or time == "0" or price == "0":
+    #Colocar aviso que tem de colocar o tempo e preço
     st.warning("Tem de colocar valores da relação tempo preço.")
 else:
     if st.button("Calcular melhor transporte"):
@@ -349,64 +363,84 @@ else:
 
             #verificar se é melhor carro ou comboio
             if cost_benefit(int(time), int(price), best_time_car, best_price_car, best_time_train, best_price_train) == 1:
-                #verificar se é melhor carro ou comboio
+                #verificar se é melhor carro ou avião
                 if cost_benefit(int(time), int(price), best_time_car, best_price_car, best_time_plane, best_price_plane) == 1:
                     meio = "Carro"
                 else:
                     meio = "Avião"
             else:
+                #Verificar se é melhor comboio ou avião
                 if cost_benefit(int(time), int(price), best_time_train, best_price_train, best_time_plane, best_price_plane) == 1:
                     meio = "Comboio"
                 else:
                     meio = "Avião"
 
             if meio == "Carro":
+                #Colocar valores caso seja carro
                 travel_type = "car"
                 value_time = best_time_car
                 value_price = best_price_car
                 parents,x = find_route(origem, destino, otimize, "car")
             if meio == "Comboio":
+                #Colocar valores caso seja Comboio
                 travel_type = "train"
                 value_time = best_time_train
                 value_price = best_price_train
                 parents,x = find_route(origem, destino, otimize, "train")
             if meio == "Avião":
+                #Colocar valores caso seja Avião
                 travel_type = "plane"
                 value_time = best_time_plane
                 value_price = best_price_plane
                 parents,x = find_route(origem, destino, otimize, "plane")
 
+            #Criar o caminho de uma forma visualmente aceitavel
             path = generate_path(parents, origem, destino)
             
+            #Colocar dados do melhor transporte
             st.success(f"Melhor meio de transporte: **{meio}**\n\n{path}\n\n{criterio.replace('_', ' + ').title()}: **{value_time // 60} horas e {value_time % 60} minutos ou {value_price:.2f} euros**")
             
+            #Colocar tabela tempo
             show_table(f"Tempo - {meio} (minutos)", table_routes['time_' + travel_type])
+            #Colocar tabela preço
             show_table(f"Preço - {meio} (€)", table_routes['price_' + travel_type])
         else:
+            #Obter dados das viagens de carro, comboio e avião
             parents_car,car = find_route(origem, destino, criterio, "car")
             parents_train,train = find_route(origem, destino, criterio, "train")
             parents_plane,plane = find_route(origem, destino, criterio, "plane")
+            #Verificar qual a menor
             if(car < train and car < plane):
+                #Colocar valores caso seja carro
                 travel_type = "car"
                 meio = "Carro"
                 valor = car
                 parents = parents_car
             if(train < car and train < plane):
+                #Colocar valores caso seja Comboio
                 travel_type = "train"
                 meio = "Comboio"
                 valor = train
                 parents = parents_train
             if(plane < car and plane < train):
+                #Colocar valores caso seja Avião
                 travel_type = "plane"
                 meio = "Avião"
                 valor = plane
                 parents = parents_plane
+            
+            #Obter as unidades se é tempo ou preço
             unidade = f"{valor // 60} horas e {valor % 60} minutos" if criterio == "time" else f"{valor:.2f} euros"
+            
+            #Criar o caminho de uma forma visualmente aceitavel
             path = generate_path(parents, origem, destino)
+
+            #Colocar dados do melhor transporte
             st.success(f"Melhor meio de transporte: **{meio}**\n\n{path}\n\n{criterio.capitalize()}: **{unidade}**")
-            #Tabela
+
+            #Colocar tabela tempo
             show_table(f"Tempo - {meio} (minutos)" if criterio == "time" else f"Preço - {meio} (€)", table_routes[criterio + '_' + travel_type])
 
-
+        #Colocar link para Google Maps
         st.html(f"<p>Verificar com dados reais:<a href='https://www.google.com/maps/dir/{nodes_lat_long[origem][0]},{nodes_lat_long[origem][1]}/{nodes_lat_long[destino][0]},{nodes_lat_long[destino][1]}' target='_blank'>Google Maps</a>")
 
